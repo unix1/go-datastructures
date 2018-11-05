@@ -16,10 +16,13 @@ limitations under the License.
 
 package augmentedtree
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 type dimension struct {
-	low, high int64
+	low, high big.Int
 }
 
 type mockInterval struct {
@@ -33,17 +36,20 @@ func (mi *mockInterval) checkDimension(dimension uint64) {
 	}
 }
 
-func (mi *mockInterval) LowAtDimension(dimension uint64) int64 {
+func (mi *mockInterval) LowAtDimension(dimension uint64) big.Int {
 	return mi.dimensions[dimension-1].low
 }
 
-func (mi *mockInterval) HighAtDimension(dimension uint64) int64 {
+func (mi *mockInterval) HighAtDimension(dimension uint64) big.Int {
 	return mi.dimensions[dimension-1].high
 }
 
 func (mi *mockInterval) OverlapsAtDimension(iv Interval, dimension uint64) bool {
-	return mi.HighAtDimension(dimension) > iv.LowAtDimension(dimension) &&
-		mi.LowAtDimension(dimension) < iv.HighAtDimension(dimension)
+	miHigh := mi.HighAtDimension(dimension)
+	miLow := mi.LowAtDimension(dimension)
+	ivHigh := iv.HighAtDimension(dimension)
+	ivLow := iv.LowAtDimension(dimension)
+	return miHigh.Cmp(&ivLow) > 0 && miLow.Cmp(&ivHigh) < 0
 }
 
 func (mi mockInterval) ID() uint64 {
@@ -51,9 +57,13 @@ func (mi mockInterval) ID() uint64 {
 }
 
 func constructSingleDimensionInterval(low, high int64, id uint64) *mockInterval {
-	return &mockInterval{[]*dimension{&dimension{low: low, high: high}}, id}
+	return &mockInterval{[]*dimension{&dimension{low: *big.NewInt(low), high: *big.NewInt(high)}}, id}
 }
 
 func constructMultiDimensionInterval(id uint64, dimensions ...*dimension) *mockInterval {
 	return &mockInterval{dimensions: dimensions, id: id}
+}
+
+func constructDimension(low, high int64) *dimension {
+	return &dimension{low: *big.NewInt(low), high: *big.NewInt(high)}
 }

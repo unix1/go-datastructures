@@ -31,6 +31,10 @@ range handling.
 */
 package augmentedtree
 
+import (
+	"math/big"
+)
+
 // Interval is the interface that must be implemented by any
 // item added to the interval tree.  This interface is similar to the
 // interval found in the rangetree package and it should be possible
@@ -41,10 +45,10 @@ package augmentedtree
 type Interval interface {
 	// LowAtDimension returns an integer representing the lower bound
 	// at the requested dimension.
-	LowAtDimension(uint64) int64
+	LowAtDimension(uint64) big.Int
 	// HighAtDimension returns an integer representing the higher bound
 	// at the requested dimension.
-	HighAtDimension(uint64) int64
+	HighAtDimension(uint64) big.Int
 	// OverlapsAtDimension should return a bool indicating if the provided
 	// interval overlaps this interval at the dimension requested.
 	OverlapsAtDimension(Interval, uint64) bool

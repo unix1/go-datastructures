@@ -17,6 +17,7 @@ limitations under the License.
 package augmentedtree
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -67,11 +68,11 @@ func checkRedBlack(tb testing.TB, node *node, dimension int) (int64, int64, int6
 	}
 
 	fn := func(min, max int64) {
-		if min != -1 && min < node.min {
+		if min != -1 && big.NewInt(min).Cmp(&node.min) < 0 {
 			tb.Errorf(`Min not set correctly: %+v, node: %+v`, min, node)
 		}
 
-		if max != -1 && max > node.max {
+		if max != -1 && big.NewInt(max).Cmp(&node.max) > 0 {
 			tb.Errorf(`Max not set correctly: %+v, node: %+v`, max, node)
 		}
 	}
@@ -82,18 +83,20 @@ func checkRedBlack(tb testing.TB, node *node, dimension int) (int64, int64, int6
 	fn(minR, maxR)
 
 	min := min(minL, minR)
-	if min == -1 && node.min != node.interval.LowAtDimension(1) {
+	lowAtDimension1 := node.interval.LowAtDimension(1)
+	if min == -1 && node.min.Cmp(&lowAtDimension1) != 0 {
 		tb.Errorf(`Min not set correctly, node: %+v`, node)
-	} else if min != -1 && node.children[0] != nil && node.children[0].min != node.min {
+	} else if min != -1 && node.children[0] != nil && node.children[0].min.Cmp(&node.min) != 0 {
 		tb.Errorf(`Min not set correctly: node: %+v, child: %+v`, node, node.children[0])
-	} else if min != -1 && node.children[0] == nil && node.min != node.interval.LowAtDimension(1) {
+	} else if min != -1 && node.children[0] == nil && node.min.Cmp(&lowAtDimension1) != 0 {
 		tb.Errorf(`Min not set correctly: %+v`, node)
 	}
 
 	max := max(maxL, maxR)
-	if max == -1 && node.max != node.interval.HighAtDimension(1) {
+	highAtDimension1 := node.interval.HighAtDimension(1)
+	if max == -1 && node.max.Cmp(&highAtDimension1) != 0 {
 		tb.Errorf(`Max not set correctly, node: %+v`, node)
-	} else if max > node.interval.HighAtDimension(1) && max != node.max {
+	} else if big.NewInt(max).Cmp(&highAtDimension1) > 0 && big.NewInt(max).Cmp(&node.max) != 0 {
 		tb.Errorf(`Max not set correctly, max: %+v, node: %+v`, max, node)
 	}
 
@@ -103,13 +106,13 @@ func checkRedBlack(tb testing.TB, node *node, dimension int) (int64, int64, int6
 
 	if left != 0 && right != 0 {
 		if isRed(node) {
-			return left, node.min, node.max
+			return left, node.min.Int64(), node.max.Int64()
 		}
 
-		return left + 1, node.min, node.max
+		return left + 1, node.min.Int64(), node.max.Int64()
 	}
 
-	return 0, node.min, node.max
+	return 0, node.min.Int64(), node.max.Int64()
 }
 
 func constructSingleDimensionTestTree(number int) (*tree, Intervals) {
@@ -132,7 +135,7 @@ func TestSimpleAddNilRoot(t *testing.T) {
 
 	it.Add(iv)
 
-	expected := newNode(iv, 5, 10, 1)
+	expected := newNode(iv, *big.NewInt(5), *big.NewInt(10), 1)
 	expected.red = false
 
 	assert.Equal(t, expected, it.root)
@@ -146,13 +149,13 @@ func TestSimpleAddRootLeft(t *testing.T) {
 	iv := constructSingleDimensionInterval(5, 10, 0)
 	it.Add(iv)
 
-	expectedRoot := newNode(iv, 4, 11, 1)
+	expectedRoot := newNode(iv, *big.NewInt(4), *big.NewInt(11), 1)
 	expectedRoot.red = false
 
 	iv = constructSingleDimensionInterval(4, 11, 1)
 	it.Add(iv)
 
-	expectedChild := newNode(iv, 4, 11, 1)
+	expectedChild := newNode(iv, *big.NewInt(4), *big.NewInt(11), 1)
 	expectedRoot.children[0] = expectedChild
 
 	assert.Equal(t, expectedRoot, it.root)
@@ -166,13 +169,13 @@ func TestSimpleAddRootRight(t *testing.T) {
 	iv := constructSingleDimensionInterval(5, 10, 0)
 	it.Add(iv)
 
-	expectedRoot := newNode(iv, 5, 11, 1)
+	expectedRoot := newNode(iv, *big.NewInt(5), *big.NewInt(11), 1)
 	expectedRoot.red = false
 
 	iv = constructSingleDimensionInterval(7, 11, 1)
 	it.Add(iv)
 
-	expectedChild := newNode(iv, 7, 11, 1)
+	expectedChild := newNode(iv, *big.NewInt(7), *big.NewInt(11), 1)
 	expectedRoot.children[1] = expectedChild
 
 	assert.Equal(t, expectedRoot, it.root)
@@ -186,19 +189,19 @@ func TestAddRootLeftAndRight(t *testing.T) {
 	iv := constructSingleDimensionInterval(5, 10, 0)
 	it.Add(iv)
 
-	expectedRoot := newNode(iv, 4, 12, 1)
+	expectedRoot := newNode(iv, *big.NewInt(4), *big.NewInt(12), 1)
 	expectedRoot.red = false
 
 	iv = constructSingleDimensionInterval(4, 11, 1)
 	it.Add(iv)
 
-	expectedLeft := newNode(iv, 4, 11, 1)
+	expectedLeft := newNode(iv, *big.NewInt(4), *big.NewInt(11), 1)
 	expectedRoot.children[0] = expectedLeft
 
 	iv = constructSingleDimensionInterval(7, 12, 1)
 	it.Add(iv)
 
-	expectedRight := newNode(iv, 7, 12, 1)
+	expectedRight := newNode(iv, *big.NewInt(7), *big.NewInt(12), 1)
 	expectedRoot.children[1] = expectedRight
 
 	assert.Equal(t, expectedRoot, it.root)

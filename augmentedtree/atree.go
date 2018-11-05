@@ -16,7 +16,11 @@ limitations under the License.
 
 package augmentedtree
 
-func intervalOverlaps(n *node, low, high int64, interval Interval, maxDimension uint64) bool {
+import (
+	"math/big"
+)
+
+func intervalOverlaps(n *node, low, high big.Int, interval Interval, maxDimension uint64) bool {
 	if !overlaps(n.interval.HighAtDimension(1), high, n.interval.LowAtDimension(1), low) {
 		return false
 	}
@@ -34,18 +38,18 @@ func intervalOverlaps(n *node, low, high int64, interval Interval, maxDimension 
 	return true
 }
 
-func overlaps(high, otherHigh, low, otherLow int64) bool {
-	return high >= otherLow && low <= otherHigh
+func overlaps(high, otherHigh, low, otherLow big.Int) bool {
+	return high.Cmp(&otherLow) >= 0 && low.Cmp(&otherHigh) <= 0
 }
 
 // compare returns an int indicating which direction the node
 // should go.
-func compare(nodeLow, ivLow int64, nodeID, ivID uint64) int {
-	if ivLow > nodeLow {
+func compare(nodeLow, ivLow big.Int, nodeID, ivID uint64) int {
+	if ivLow.Cmp(&nodeLow) > 0 {
 		return 1
 	}
 
-	if ivLow < nodeLow {
+	if ivLow.Cmp(&nodeLow) < 0 {
 		return 0
 	}
 
@@ -54,13 +58,13 @@ func compare(nodeLow, ivLow int64, nodeID, ivID uint64) int {
 
 type node struct {
 	interval Interval
-	max, min int64    // max value held by children
+	max, min big.Int  // max value held by children
 	children [2]*node // array to hold left/right
 	red      bool     // indicates if this node is red
 	id       uint64   // we store the id locally to reduce the number of calls to the method on the interface
 }
 
-func (n *node) query(low, high int64, interval Interval, maxDimension uint64, fn func(node *node)) {
+func (n *node) query(low, high big.Int, interval Interval, maxDimension uint64, fn func(node *node)) {
 	if n.children[0] != nil && overlaps(n.children[0].max, high, n.children[0].min, low) {
 		n.children[0].query(low, high, interval, maxDimension, fn)
 	}
@@ -95,7 +99,7 @@ func newDummy() node {
 	}
 }
 
-func newNode(interval Interval, min, max int64, dimension uint64) *node {
+func newNode(interval Interval, min, max big.Int, dimension uint64) *node {
 	itn := &node{
 		interval: interval,
 		min:      min,
@@ -182,11 +186,11 @@ func (tree *tree) add(iv Interval) {
 			node.children[0].red = false
 			node.children[1].red = false
 		}
-		if max > node.max {
+		if max.Cmp(&node.max) > 0 {
 			node.max = max
 		}
 
-		if ivLow < node.min {
+		if ivLow.Cmp(&node.min) < 0 {
 			node.min = ivLow
 		}
 
@@ -344,26 +348,27 @@ func isRed(node *node) bool {
 func setMax(parent *node) {
 	parent.max = parent.interval.HighAtDimension(1)
 
-	if parent.children[0] != nil && parent.children[0].max > parent.max {
+	if parent.children[0] != nil && parent.children[0].max.Cmp(&parent.max) > 0 {
 		parent.max = parent.children[0].max
 	}
 
-	if parent.children[1] != nil && parent.children[1].max > parent.max {
+	if parent.children[1] != nil && parent.children[1].max.Cmp(&parent.max) > 0 {
 		parent.max = parent.children[1].max
 	}
 }
 
 func setMin(parent *node) {
 	parent.min = parent.interval.LowAtDimension(1)
-	if parent.children[0] != nil && parent.children[0].min < parent.min {
+	if parent.children[0] != nil && parent.children[0].min.Cmp(&parent.min) < 0 {
 		parent.min = parent.children[0].min
 	}
 
-	if parent.children[1] != nil && parent.children[1].min < parent.min {
+	if parent.children[1] != nil && parent.children[1].min.Cmp(&parent.min) < 0 {
 		parent.min = parent.children[1].min
 	}
 
-	if parent.interval.LowAtDimension(1) < parent.min {
+	lowAtDimension1 := parent.interval.LowAtDimension(1)
+	if lowAtDimension1.Cmp(&parent.min) < 0 {
 		parent.min = parent.interval.LowAtDimension(1)
 	}
 }
